@@ -222,8 +222,8 @@ class Manipulator():
         
         
     
-    def MSCode(self,dlatent_tmp,boundary_tmp):
-        
+    def CalcStyleVectors(self,dlatent_tmp,boundary_tmp):
+        '''Manipulate the style vectors by adding the boundary direction, and return the manipulated style vectors as a list'''
         step=len(self.alpha)
         dlatent_tmp1=[tmp.reshape((self.num_images,-1)) for tmp in dlatent_tmp]
         dlatent_tmp2=[np.tile(tmp[:,None],(1,step,1)) for tmp in dlatent_tmp1] # (10, 7, 512)
@@ -264,7 +264,7 @@ class Manipulator():
             else:
                 boundary_tmp.append(tmp[bname])
         
-        codes=self.MSCode(dlatent_tmp,boundary_tmp)
+        codes=self.CalcStyleVectors(dlatent_tmp,boundary_tmp)
             
         out=self.GenerateImg(codes)
         return codes,out
@@ -284,7 +284,7 @@ class Manipulator():
         tmp1[cindex]=self.code_std[ml][cindex]  #1
         boundary_tmp[ml]=tmp1
         
-        codes=self.MSCode(dlatent_tmp,boundary_tmp)
+        codes=self.CalcStyleVectors(dlatent_tmp,boundary_tmp)
         out=self.GenerateImg(codes)
         return codes,out
     
@@ -334,7 +334,7 @@ class Manipulator():
         self.fmaps=fmaps_o
         return l_p
     
-    def GetCodeMS(self):
+    def GetStyleVecMS(self):
         '''Calculate the mean and std of each style vector across the n images, and store as self.code_mean and self.code_std'''
         m=[] # mean of each style vector across the n images, as a list
         std=[] # std of each style vector across the n images, as a list

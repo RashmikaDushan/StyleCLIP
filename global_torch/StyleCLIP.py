@@ -136,10 +136,11 @@ imagenet_templates = [
 
 
 def zeroshot_classifier(classnames, templates,model):
+    '''get the CLIP text embedding for the given classnames'''
     with torch.no_grad():
         zeroshot_weights = []
         for classname in classnames:
-            texts = [template.format(classname) for template in templates] #format with class
+            texts = [template.format(classname) for template in templates] # format the text(classname) with  templates to get average text embedding, which is more robust to different templates.
             texts = clip.tokenize(texts).cuda() #tokenize
             class_embeddings = model.encode_text(texts) #embed with text encoder
             class_embeddings /= class_embeddings.norm(dim=-1, keepdim=True)
@@ -150,7 +151,8 @@ def zeroshot_classifier(classnames, templates,model):
     return zeroshot_weights
 
 
-def GetDt(classnames,model):
+def GetClipDirection(classnames,model):
+    '''get the CLIP direction vector for the target - neutral class clip embeddings'''
     text_features=zeroshot_classifier(classnames, imagenet_templates,model).t()
     
     dt=text_features[0]-text_features[1]
@@ -162,7 +164,8 @@ def GetDt(classnames,model):
     return dt
 
 
-def GetBoundary(fs3,dt,M,threshold):
+def GetStyleDirection(fs3,dt,M,threshold):
+    '''get the direction in the style space (boundary) with the precomputed fs3 matrix.'''
     tmp=np.dot(fs3,dt)
     
     ds_imp=copy.copy(tmp)
@@ -193,7 +196,7 @@ if __name__ == "__main__":
     M.SetGParameters()
     num_img=100_000
     M.GenerateS(num_img=num_img)
-    M.GetCodeMS()
+    M.GetStyleVecMS()
     np.set_printoptions(suppress=True)
     #%%
     file_path='./npy/human/'
@@ -229,8 +232,8 @@ if __name__ == "__main__":
         print()
         print(target)
         classnames=[target,neutral]
-        dt=GetDt(classnames,model)
-        boundary_tmp2,num_c=GetBoundary(fs3,dt,M,threshold=beta)
+        dt=GetClipDirection(classnames,model)
+        boundary_tmp2,num_c=GetStyleDirection(fs3,dt,M,threshold=beta)
         all_b.append(boundary_tmp2)
         codes=M.MSCode(dlatent_tmp,boundary_tmp2)
         

@@ -2,7 +2,7 @@ from PIL import Image
 import numpy as np
 import torch
 import clip
-from StyleCLIP import GetBoundary, GetDt
+from StyleCLIP import GetStyleDirection, GetClipDirection
 from manipulate import Manipulator
 import os
 
@@ -33,23 +33,23 @@ if __name__ == "__main__":
         f"Style vectors shape: {len(M.dlatents)}, {M.dlatents[0].shape[0]}, {M.dlatents[0].shape[1]}"
     )
 
-    M.GetCodeMS()  # Compute the mean and std of the style vectors
+    M.GetStyleVecMS()  # Compute the mean and std of the style vectors
     print(f"Mean:  {len(M.code_mean)}, { M.code_mean[0].shape[0]}")
     print(f"Std:  {len(M.code_std)}, { M.code_std[0].shape[0]}")
 
     file_path = "global_torch/npy/ffhq/"
-    fs3 = np.load(
+    fs3_matrix = np.load(
         file_path + "fs3.npy"
     )  # Load the precomputed style space x CLIP direction matrix (fs3) for the FFHQ dataset
 
     img_indexs = np.arange(8)  # image count | n = 8
 
-    dlatent_tmp = [
+    style_vecs_initial = [
         tmp[img_indexs] for tmp in M.dlatents
     ]  # get top n style vectors | shape = 26, n, 512
     M.num_images = len(img_indexs)
     print(
-        f"Selected style vectors shape: {len(dlatent_tmp)}, {dlatent_tmp[0].shape[0]}, {dlatent_tmp[0].shape[1]}"
+        f"Selected style vectors shape: {len(style_vecs_initial)}, {style_vecs_initial[0].shape[0]}, {style_vecs_initial[0].shape[1]}"
     )
 
     M.step = 1  # step size for manipulation
@@ -63,11 +63,7 @@ if __name__ == "__main__":
         ]
     )
 
-    M.step = 1
-
-    imgs = []
-    all_b = []
-    for i in range(len(paras)):
+    for i in range(len(paras)): # for each text prompt
         filename, neutral, target, beta, alpha = paras[i]
 
         beta = np.float32(beta)
@@ -75,21 +71,19 @@ if __name__ == "__main__":
         M.alpha = [alpha]
 
         print()
-        print(filename)
+        print(filename, beta, alpha)
         classnames = [target, neutral]
-        dt = GetDt(
-            classnames, model
-        )  # Get the CLIP direction vector for the target and neutral classes
-        boundary_tmp2, num_c = GetBoundary(fs3, dt, M, threshold=beta)
-        all_b.append(boundary_tmp2)
-        codes = M.MSCode(dlatent_tmp, boundary_tmp2)
 
-        print(
-            f"Manipulated codes shape: {len(codes)}, {codes[0].shape[0]}, {codes[0].shape[1]}"
-        )
-        out = M.GenerateImg(codes)
+        clip_direction = GetClipDirection(
+            classnames, model
+        )  # Get the CLIP direction vector for the target - neutral classes
+
+        style_direction, num_c = GetStyleDirection(fs3_matrix, clip_direction, M, threshold=beta) # Get the style space direction corresponding to the CLIP direction
+
+        style_vectors = M.CalcStyleVectors(style_vecs_initial, style_direction) # Manipulate the style vectors in the direction of the style_direction with the given alpha and beta
+
+        out = M.GenerateImg(style_vectors)
         print(f"Generated image shape: {out.shape}")
-        imgs.append(out)
 
         for i in range(len(out)):
             img = out[i][0]
