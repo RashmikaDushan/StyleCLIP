@@ -38,7 +38,7 @@ def change_style_code(codes, layer, channel, step):
 def Vis(bname,suffix,out,rownames=None,colnames=None,save_path=None,viz_size=256):
     
     if save_path is None:
-        save_path='./html/'
+        save_path='html/'
     
     
     num_images=out.shape[0]
@@ -335,10 +335,11 @@ class Manipulator():
         return l_p
     
     def GetCodeMS(self):
-        m=[]
-        std=[]
+        '''Calculate the mean and std of each style vector across the n images, and store as self.code_mean and self.code_std'''
+        m=[] # mean of each style vector across the n images, as a list
+        std=[] # std of each style vector across the n images, as a list
         for i in range(len(self.dlatents)):
-            tmp= self.dlatents[i] 
+            tmp= self.dlatents[i]
             tmp_mean=tmp.mean(axis=0)
             tmp_std=tmp.std(axis=0)
             m.append(tmp_mean)
