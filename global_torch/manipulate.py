@@ -95,6 +95,7 @@ def LoadModel(network_pkl,device):
 
 
 def S2List(encoded_styles):
+    '''convert styles dict to list'''
     all_s=[]
     for name in encoded_styles.keys():
         tmp=encoded_styles[name].cpu().numpy()
@@ -125,6 +126,7 @@ class Manipulator():
         
     
     def GetSName(self):
+        '''Return layer names in synthesis network, in order'''
         s_names=[]
         for res in self.G.synthesis.block_resolutions:
             if res==4: 
@@ -154,15 +156,20 @@ class Manipulator():
         
     
     
-    def GenerateS(self,num_img=100):
+    def GenerateS(self,num_img=100, debug=False):
+        '''Generate style vectors from random z vectors and return as a list'''
         seed=5
         with torch.no_grad(): 
             z = torch.from_numpy(np.random.RandomState(seed).randn(num_img, self.G.z_dim)).to(self.device)
             ws = self.G.mapping(z=z,c=None,truncation_psi=self.truncation_psi,truncation_cutoff=self.truncation_cutoff)
             encoded_styles=self.G.synthesis.W2S(ws)
+            if debug: # print the shape of each style vector
+                print("encoded_styles shape:")
+                for k, v in encoded_styles.items():
+                    print(f"{k}: {v.shape}")
 #            encoded_styles=encoded_styles.cpu().numpy()
             
-        self.dlatents=S2List(encoded_styles)
+        self.dlatents=S2List(encoded_styles) # convert dict to list
     
     def GenerateImg(self,codes):
         
@@ -204,6 +211,7 @@ class Manipulator():
         return out
     
     def SetGParameters(self):
+        '''Set parameters related to the generator, such as number of layers, image size, etc.'''
         self.num_layers=self.G.synthesis.num_ws
         self.img_size=self.G.synthesis.img_resolution
         self.s_names=self.GetSName()
